@@ -1,0 +1,4 @@
+/documents/*/
+/documents_processed/case_precedent/*
+/rag_knowledge_base/*
+.env 
