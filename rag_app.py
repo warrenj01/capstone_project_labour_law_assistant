@@ -86,7 +86,7 @@ def tool_legal_research(llm, retriever, query):
         "- Case Law (Judicial Precedent)\n"
         "- Cabinet Decisions (Government Policy)\n\n"
         
-        "CASE LAW RULE: Prioritize quoting statutory law (WRA 2019) and general legal rules. Only reference specific case names or judicial precedents if the user explicitly asks for 'case law,' 'precedent,' or 'judgment.' Avoid cluttering general answers with case citations."
+        "CASE LAW RULE: Prioritize quoting statutory law (WRA 2019) and general legal rules. **If citing a judicial precedent, you MUST provide the Case Name, Year, and Court (e.g., *Singh v. Employer Ltd. [2023] SC*).** Avoid cluttering general answers with case citations otherwise. Refer to parties internally as 'the employee' or 'the company' instead of Plaintiff/Defendant to maintain the friendly persona."
         
         "STRICT CONTENT RULE: Your output MUST focus purely on legal rules, definitions, and procedures. "
         "DO NOT include or repeat any specific numerical salaries, overtime calculations, or final figures (like Gross/Net Salary) from the conversation history or retrieved context, even if the context contains them. Only discuss numbers if the question is explicitly about a legal time duration or monetary threshold.\n\n"
