@@ -75,7 +75,6 @@ def tool_legal_research(llm, retriever, query):
         "You are a confident and empathetic Labour Law Counsellor specializing in Mauritian legislation. "
         "Your primary goal is to provide clear, actionable, and legally sound guidance, making the user feel confident and supported. "
         
-        # --- FIX: New Instruction to avoid robotic phrasing ---
         "**TONE INSTRUCTION:** Do NOT start your answer with phrases like 'Based on the context...', 'According to the documents...', or 'As per the provided information...'. Speak with authority and confidence, integrating the information naturally into your advice, as a human expert would."
         "Crucially, when discussing paid leaves (sick leave or annual leave), always remind the user that entitlement often requires meeting minimum service periods, "
         "such as completing 12 months of continuous service for full annual leave. Specifically, paid leaves are typically *not* granted if an employee has been "
@@ -144,15 +143,42 @@ def tool_accountant(llm, query, history):
 # --- FIX: Replaced simple string matching router with LLM-based router ---
 def agent_router(llm, user_input, history):
     """The Investigator/Router, LLM-based for contextual routing."""
+    
+    # ----------------------------------------------------------------------
+    # CRITICAL FIX 1: Explicit Logic Override for immediate Accounting Follow-ups
+    # ----------------------------------------------------------------------
+    force_accounting = False
+    lower_input = user_input.lower()
+    
+    # Check 1: Initial Calculation Request (Addressing the user's first failure point)
+    # Using regex to find keywords like "calculate", "pay", "salary", or "Rs" followed by a number
+    if re.search(r'(calculate|salary|pay|overtime|rs)\s+[\d,.]+', lower_input) or \
+       ("calculate" in lower_input and any(keyword in lower_input for keyword in ["salary", "pay", "overtime"])):
+        force_accounting = True # <--- LINE 150 (Hard-coded initial calculation routing)
+    
+    # Check 2: Multi-Turn Update (Addressing the user's second failure point)
+    # This remains the same, ensuring updates immediately follow calculations.
+    if history and history[-1].type == 'ai': 
+        last_response_message = history[-1].content
+        # If the last response was a calculation AND the new input contains a number, force ACCOUNTING
+        if "Step 1: Calculate" in last_response_message and re.search(r'\d+', user_input):
+            force_accounting = True # <--- LINE 156 (Hard-coded multi-turn update routing)
+            
+    if force_accounting:
+        return "ACCOUNTING" # <--- LINE 159 (Returns immediately if calculation is detected)
+    # ----------------------------------------------------------------------
+    
     system_prompt = (
         "You are a smart AI Coordinator 'Orchestrator'. You manage three experts:\n"
         "1. LEGAL: For questions about laws (WRA), court cases, or government policy announcements (Cabinet).\n"
         "2. LETTER: For requests to write, draft, or create official letters/emails.\n"
         "3. ACCOUNTING: For requests involving calculations, salary math, or tax numbers.\n\n"
         "**STRICT LEGAL OVERRIDE RULE:** If the query contains any legal keywords (e.g., 'eligible', 'entitled', 'law', 'vacation', 'right') AND specific high-value numbers (e.g., 50000, 75000), you MUST assume the user is asking about a legal threshold related to income and output 'LEGAL'. Do NOT route to accounting just because a number is present.\n"
-        "**STRICT MULTI-TURN RULE:** If the immediately preceding assistant message was a detailed calculation (ACCOUNTING), the current user query is **overwhelmingly likely** to be an update, clarification, or adjustment to that calculation (e.g., 'What if tax was 1000?'). In this scenario, you **MUST** output 'ACCOUNTING' unless the user clearly changes the subject (e.g., 'Now write me a letter').\n"
         
-        # --- FIX: Routing preference refinement for follow-ups ---
+        "**STRICT MULTI-TURN RULE (IMMEDIATE RECALCULATION):** If the immediately preceding assistant message was a detailed calculation (ACCOUNTING), the current user query is **overwhelmingly likely** to be an update, clarification, or adjustment to that calculation (e.g., 'What if tax was 1000?'). In this scenario, you **MUST** output 'ACCOUNTING' unless the user clearly changes the subject (e.g., 'Now write me a letter'). YOU MUST ALSO REDO the calculation immediately and show result(s) with the amended parameter, without asking the user if they want an updated calculation.\n"
+        
+        "**ROUTING ERROR PENALTY:** If the previous tool was 'ACCOUNTING' and the current query contains a number (e.g., '1000'), and you fail to output 'ACCOUNTING', you will receive a severe routing error penalty. Therefore, prioritize 'ACCOUNTING' in such follow-up scenarios above all other decisions, including 'GREETING'. "
+        
         "**ROUTING PREFERENCE:** If the previous assistant message was a tool output (LEGAL, LETTER, ACCOUNTING), and the current query is not a new topic, always try to route back to the last used tool or output 'INVESTIGATE'. **NEVER output 'GREETING' in response to a direct follow-up.**"
         
         "ROUTING INSTRUCTION: Analyze the current user query in the context of the entire conversation history. "
@@ -249,7 +275,7 @@ st.set_page_config(page_title="Mauritian - Labour Law AI Assistant", layout="wid
 @st.dialog("About")
 def show_about_popup():
     st.header("Jean Michel Nelson")
-    st.caption("GenAI & Machine Learning Bootcamp - 2025")
+    st.caption("GenAI & Machine Learning Bootcamp 2025")
     st.write("This Capstone Project demonstrates the power of Multi-Agent RAG systems in making legal information accessible.")
     st.markdown("**Project Date:** Nov-Dec 2025")
     st.markdown("**Technology:** LangChain, Streamlit, ChromaDB, Llama 3")
