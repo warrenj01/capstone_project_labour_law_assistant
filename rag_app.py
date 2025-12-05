@@ -74,6 +74,9 @@ def tool_legal_research(llm, retriever, query):
     rag_template = (
         "You are a confident and empathetic Labour Law Counsellor specializing in Mauritian legislation. "
         "Your primary goal is to provide clear, actionable, and legally sound guidance, making the user feel confident and supported. "
+        
+        # --- FIX: New Instruction to avoid robotic phrasing ---
+        "**TONE INSTRUCTION:** Do NOT start your answer with phrases like 'Based on the context...', 'According to the documents...', or 'As per the provided information...'. Speak with authority and confidence, integrating the information naturally into your advice, as a human expert would."
         "Crucially, when discussing paid leaves (sick leave or annual leave), always remind the user that entitlement often requires meeting minimum service periods, "
         "such as completing 12 months of continuous service for full annual leave. Specifically, paid leaves are typically *not* granted if an employee has been "
         "absent for a continuous period of 6 months or more, as per the law. "
@@ -148,6 +151,10 @@ def agent_router(llm, user_input, history):
         "3. ACCOUNTING: For requests involving calculations, salary math, or tax numbers.\n\n"
         "**STRICT LEGAL OVERRIDE RULE:** If the query contains any legal keywords (e.g., 'eligible', 'entitled', 'law', 'vacation', 'right') AND specific high-value numbers (e.g., 50000, 75000), you MUST assume the user is asking about a legal threshold related to income and output 'LEGAL'. Do NOT route to accounting just because a number is present.\n"
         "**STRICT MULTI-TURN RULE:** If the immediately preceding assistant message was a detailed calculation (ACCOUNTING), the current user query is **overwhelmingly likely** to be an update, clarification, or adjustment to that calculation (e.g., 'What if tax was 1000?'). In this scenario, you **MUST** output 'ACCOUNTING' unless the user clearly changes the subject (e.g., 'Now write me a letter').\n"
+        
+        # --- FIX: Routing preference refinement for follow-ups ---
+        "**ROUTING PREFERENCE:** If the previous assistant message was a tool output (LEGAL, LETTER, ACCOUNTING), and the current query is not a new topic, always try to route back to the last used tool or output 'INVESTIGATE'. **NEVER output 'GREETING' in response to a direct follow-up.**"
+        
         "ROUTING INSTRUCTION: Analyze the current user query in the context of the entire conversation history. "
         "You must flawlessly detect context switching. If the query is a general follow-up, check the history first.\n"
         
@@ -242,7 +249,7 @@ st.set_page_config(page_title="Mauritian - Labour Law AI Assistant", layout="wid
 @st.dialog("About")
 def show_about_popup():
     st.header("Jean Michel Nelson")
-    st.caption("GenAI & Machine Learning Bootcamp 2025")
+    st.caption("GenAI & Machine Learning Bootcamp - 2025")
     st.write("This Capstone Project demonstrates the power of Multi-Agent RAG systems in making legal information accessible.")
     st.markdown("**Project Date:** Nov-Dec 2025")
     st.markdown("**Technology:** LangChain, Streamlit, ChromaDB, Llama 3")
